@@ -18,7 +18,6 @@
     Date: 14-2-2017
     */
 
-`timescale 1ns / 1ps
 
 module jt12_mmr(
     input           rst,
@@ -52,6 +51,7 @@ module jt12_mmr(
     output  reg         fast_timers,
     input               flag_A,
     input               overflow_A, 
+    output  reg [1:0]   div_setting,
     // PCM
     output  reg [8:0]   pcm,
     output  reg         pcm_en,
@@ -59,7 +59,7 @@ module jt12_mmr(
     // ADPCM-A
     output  reg  [ 7:0] aon_a,      // ON
     output  reg  [ 5:0] atl_a,      // TL
-    output  reg  [16:0] addr_a,     // address latch
+    output  reg  [15:0] addr_a,     // address latch
     output  reg  [ 7:0] lracl,      // L/R ADPCM Channel Level
     output  reg         up_start,   // write enable start address latch
     output  reg         up_end,     // write enable end address latch
@@ -123,13 +123,11 @@ module jt12_mmr(
     // PSG interace
     output  [3:0]   psg_addr,
     output  [7:0]   psg_data,
-    output  reg     psg_wr_n
+    output  reg     psg_wr_n,
+    input   [7:0]   debug_bus
 );
 
-parameter use_ssg=0, num_ch=6, use_pcm=1, use_adpcm=0, use_clkdiv=1;
-
-reg [1:0] div_setting;
-
+parameter use_ssg=0, num_ch=6, use_pcm=1, use_adpcm=0, mask_div=1;
 
 jt12_div #(.use_ssg(use_ssg)) u_div (
     .rst            ( rst             ),
@@ -200,83 +198,91 @@ generate
 endgenerate
 
 reg part;
-reg [5:0] exbank;
+
+`ifdef SIMULATION
+always @(posedge clk) if( write && rst ) begin
+    $display("WARNING [JT12]: detected write request while in reset.\nThis is likely a glue-logic error in the CPU-FM module.");
+    $finish;
+end
+`endif
 
 // this runs at clk speed, no clock gating here
+// if I try to make this an async rst it fails to map it
+// as flip flops but uses latches instead. So I keep it as sync. reset
 always @(posedge clk) begin : memory_mapped_registers
     if( rst ) begin
-        selected_register   <= 8'h0;
+        selected_register   <= 0;
         div_setting         <= 2'b10; // FM=1/6, SSG=1/4
-        up_ch               <= 3'd0;
-        up_op               <= 2'd0;
-        up_keyon            <= 1'd0;
-        up_opreg            <= 7'd0;
-        up_chreg            <= 3'd0;
+        up_ch               <= 0;
+        up_op               <= 0;
+        up_keyon            <= 0;
+        up_opreg            <= 0;
+        up_chreg            <= 0;
         // IRQ Mask
         /*{ irq_zero_en, irq_brdy_en, irq_eos_en,
             irq_tb_en, irq_ta_en } = 5'h1f; */
         // timers
-        { value_A, value_B } <= 18'd0;
+        { value_A, value_B } <= 0;
         { clr_flag_B, clr_flag_A,
-        enable_irq_B, enable_irq_A, load_B, load_A } <= 6'd0;
-        fast_timers <= 1'b0;
+        enable_irq_B, enable_irq_A, load_B, load_A } <= 0;
+        fast_timers <= 0;
         // LFO
-        lfo_freq    <= 3'd0;
-        lfo_en      <= 1'b0;
-        csm         <= 1'b0;
-        effect      <= 1'b0;
+        lfo_freq    <= 0;
+        lfo_en      <= 0;
+        csm         <= 0;
+        effect      <= 0;
         // PCM
-        pcm         <= 9'h0;
-        pcm_en      <= 1'b0;
-        pcm_wr      <= 1'b0;
+        pcm         <= 0;
+        pcm_en      <= 0;
+        pcm_wr      <= 0;
         // ADPCM-A
-        aon_a       <=  'd0;
-        atl_a       <=  'd0;
-        up_start    <=  'd0;
-        up_end      <=  'd0;
-        up_addr     <= 3'd7;
-        up_lracl    <= 3'd7;
-        up_aon      <=  'd0;
-        lracl       <=  'd0;
-        addr_a      <=  'd0;        
+        aon_a       <= 0;
+        atl_a       <= 0;
+        up_start    <= 0;
+        up_end      <= 0;
+        up_addr     <= 7;
+        up_lracl    <= 7;
+        up_aon      <= 0;
+        lracl       <= 0;
+        addr_a      <= 0;
         // ADPCM-B
-        acmd_on_b   <=  'd0;
-        acmd_rep_b  <=  'd0;
-        acmd_rst_b  <=  'd0;
-        alr_b       <=  'd0;
-        flag_ctl    <=  'd0;
-        astart_b    <=  'd0;
-        aend_b      <=  'd0;
-        adeltan_b   <=  'd0;
+        acmd_on_b   <= 0;
+        acmd_rep_b  <= 0;
+        acmd_rst_b  <= 0;
+        alr_b       <= 0;
+        flag_ctl    <= 0;
+        astart_b    <= 0;
+        aend_b      <= 0;
+        adeltan_b   <= 0;
+        flag_mask   <= 0;
         aeg_b       <= 8'hff;
         // Original test features
-        eg_stop     <= 1'b0;
-        pg_stop     <= 1'b0;
-        psg_wr_n    <= 1'b1;
+        eg_stop     <= 0;
+        pg_stop     <= 0;
+        psg_wr_n    <= 1;
         // 
         { block_ch3op1, fnum_ch3op1 } <= {3'd0, 11'd0 };
         { block_ch3op3, fnum_ch3op3 } <= {3'd0, 11'd0 };
         { block_ch3op2, fnum_ch3op2 } <= {3'd0, 11'd0 };
-        latch_fnum <= 6'd0;
-        din_copy   <= 8'd0;
-        part       <= 1'b0;
+        latch_fnum <= 0;
+        din_copy   <= 0;
+        part       <= 0;
     end else begin
         // WRITE IN REGISTERS
         if( write ) begin
             if( !addr[0] ) begin
                 selected_register <= din;  
                 part <= addr[1];        
-                if( use_clkdiv==1 ) begin
-                    case(din)
-                        // clock divider: should work only for ym2203
-                        // and ym2608.
-                        // clock divider works just by selecting the register
-                        REG_CLK_N6: div_setting[1] <= 1'b1; // 2D
-                        REG_CLK_N3: div_setting[0] <= 1'b1; // 2E
-                        REG_CLK_N2: div_setting    <= 2'b0; // 2F
-                        default:;
-                    endcase
-                end
+                if (!mask_div)
+                case(din)
+                    // clock divider: should work only for ym2203
+                    // and ym2608.
+                    // clock divider works just by selecting the register
+                    REG_CLK_N6: div_setting[1] <= 1'b1; // 2D
+                    REG_CLK_N3: div_setting[0] <= 1'b1; // 2E
+                    REG_CLK_N2: div_setting    <= 2'b0; // 2F
+                    default:;
+                endcase
             end else begin
                 // Global registers
                 din_copy <= din;
@@ -346,11 +352,10 @@ always @(posedge clk) begin : memory_mapped_registers
                             6'h8, 6'h9, 6'hA, 6'hB, 6'hC, 6'hD: begin
                                 lracl <= din;
                                 up_lracl <= selected_register[2:0];
-										  exbank[selected_register[2:0]] <= &din[7:4];
                             end
                             6'b01_????, 6'b10_????: begin
                                 if( !selected_register[3] ) addr_a[ 7:0] <= din;
-                                if( selected_register[3]  ) addr_a[16:8] <= {exbank[selected_register[2:0]], din};
+                                if( selected_register[3]  ) addr_a[15:8] <= din;
                                 case( selected_register[5:4] )
                                     2'b01, 2'b10: begin
                                         {up_end, up_start } <= selected_register[5:4];
@@ -378,10 +383,9 @@ always @(posedge clk) begin : memory_mapped_registers
                             4'ha: adeltan_b[15:8] <= din;
                             4'hb: aeg_b           <= din;
                             4'hc: begin
-									           flag_mask   <= ~{din[7],din[5:0]};
-									           flag_ctl    <= {din[7],din[5:0]}; // this lasts a single clock cycle
-									       end
-                            
+                               flag_mask   <= ~{din[7],din[5:0]};
+                               flag_ctl    <= {din[7],din[5:0]}; // this lasts a single clock cycle
+                           end
                             default:;
                         endcase
                     end
@@ -414,14 +418,14 @@ always @(posedge clk) begin : memory_mapped_registers
             pcm_wr   <= 1'b0;
             flag_ctl <= 'd0;
             up_aon   <= 1'b0;
-				acmd_up_b <= 1'b0;
+            acmd_up_b <= 1'b0;
         end
     end
 end
 
 reg [4:0] busy_cnt; // busy lasts for 32 synth clock cycles, like in real chip
 
-always @(posedge clk)
+always @(posedge clk, posedge rst)
     if( rst ) begin
         busy <= 1'b0;
         busy_cnt <= 5'd0;
@@ -436,7 +440,7 @@ always @(posedge clk)
             busy_cnt <= busy_cnt+5'd1;
         end
     end
-/* verilator tracing_off */
+/* verilator tracing_on */
 jt12_reg #(.num_ch(num_ch)) u_reg(
     .rst        ( rst       ),
     .clk        ( clk       ),      // P1
