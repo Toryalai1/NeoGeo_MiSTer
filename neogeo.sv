@@ -307,6 +307,9 @@ localparam CONF_STR = {
 	"P1o01,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"P1OIK,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"P1-;",
+	"P1oCF,H-sync Adjust,0,1,2,3,4,5,6,7,-8,-7,-6,-5,-4,-3,-2,-1;",
+	"P1oGJ,V-sync Adjust,0,1,2,3,4,5,6,7,-8,-7,-6,-5,-4,-3,-2,-1;",
+	"P1-;",
 	"d5P1o2,Vertical Crop,Disabled,216p(5x);",
 	"d5P1o36,Crop Offset,0,2,4,8,10,12,-12,-10,-8,-6,-4,-2;",
 	"P1o78,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
@@ -2147,30 +2150,41 @@ always @(posedge CLK_VIDEO) begin
 	end
 end
 
-//Re-create VSync as original one is barely equals to VBlank
+//Re-create VSync as original one barely equals to VBlank
 reg VSync;
 reg RFSH;
+wire [8:0] v_offset = {{6{status[51]}},status[50:48]};
+wire [8:0] h_offset = {{6{status[47]}},status[46:44]};
 always @(posedge CLK_VIDEO) begin
 	reg       old_hs;
 	reg       old_vbl;
 	reg [2:0] vbl;
 	reg [7:0] vblcnt, vspos, rfsh_cnt;
-	
+	reg [8:0] hspos, hsend, hwidth;
 	if(ce_pix) begin
 		old_hs <= HSync;
+		hspos <= hspos + 1'b1;
+		if(old_hs & ~HSync)
+			hsend <= hspos;
 		if(~old_hs & HSync) begin
+			hwidth <= hspos;
+			hspos <= 0;
 			old_vbl <= nBNKB;
 			
 			if(~nBNKB) vblcnt <= vblcnt+1'd1;
 			if(old_vbl & ~nBNKB) vblcnt <= 0;
 			if(~old_vbl & nBNKB) begin
-				vspos <= (vblcnt>>1) - 8'd7;
+				vspos <= (vblcnt>>1) - 8'd7  + v_offset;
 				rfsh_cnt <= vblcnt-2'd2;
 			end
 
 			{VSync,vbl} <= {vbl,1'b0};
 			if(vblcnt == vspos) {VSync,vbl} <= '1;
 		end
+		if (hspos == h_offset || hspos == hwidth + h_offset)
+			HSync_adjusted <= 1'b1;
+		else if (hspos == hsend + h_offset)
+			HSync_adjusted <= 1'b0;
 		
 		RFSH <= (vblcnt < rfsh_cnt);
 	end
@@ -2200,7 +2214,7 @@ video_cleaner video_cleaner
 	.G(~SHADOW ? G8 : {1'b0, G8[7:1]}),
 	.B(~SHADOW ? B8 : {1'b0, B8[7:1]}),
 
-	.HSync(HSync),
+	.HSync(HSync_adjusted),
 	.VSync(VSync),
 	.HBlank(HBlank[0]),
 	.VBlank(~nBNKB),
