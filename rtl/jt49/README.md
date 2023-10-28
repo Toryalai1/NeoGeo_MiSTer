@@ -1,11 +1,32 @@
 # JT49 FPGA Clone of YM2149 hardware by Jose Tejada (@topapate)
 
 You can show your appreciation through
-* [Patreon](https://patreon.com/topapate), by supporting releases
-* [Paypal](https://paypal.me/topapate), with a donation
 
+* [Patreon](https://patreon.com/jotego), by supporting open source retro releases
 
 YM2149 compatible Verilog core, with emphasis on FPGA implementation as part of JT12 in order to recreate the YM2203 part.
+
+## Documentation
+
+- [AY-3-8910 Data Manual](https://archive.org/details/AY-3-8910-8912_Feb-1979/page/n51/mode/2up)
+- [AY-3-8919 Reverse Engineered](https://github.com/lvd2/ay-3-8910_reverse_engineered)
+- [YM2149](https://archive.org/details/bitsavers_yamahaYM21_3070829)
+
+## Using JT49 in a git project
+
+If you are using JT49 in a git project, the best way to add it to your project is:
+
+1. Optionally fork JT49's repository to your own GitHub account
+2. Add it as a submodule to your git project: `git submodule add https://github.com/jotego/jt49.git`
+3. Now you can refer to the RTL files in **jt49/hdl**
+
+The advantages of a using a git submodule are:
+
+1. Your project contains a reference to a commit of the JT49 repository
+2. As long as you do not manually update the JT49 submodule, it will keep pointing to the same commit
+3. Each time you make a commit in your project, it will include a pointer to the JT49 commit used. So you will always know the JT49 that worked for you
+4. If JT49 is updated and you want to get the changes, simply update the submodule using git. The new JT49 commit used will be annotated in your project's next commit. So the history of your project will reflect that change too.
+5. JT49 files will be intact and you will use the files without altering them.
 
 ## Usage
 
@@ -15,6 +36,13 @@ There are two top level files you can use:
 
 clk_en cannot be set to 1 for correct operation. The design assumes that there will be at least one empty clock cycle between every two clk_en high clock cycles.
  
+## Files for Simulation and Synthesis
+
+When used inside a [JTFRAME](https://github.com/jotego/jtframe) project, you can use the [yaml](hdl/jt49.yaml) file provided. If you are using this repository on its own, there is a [qip](syn/quartus/jt49.qip) for Intel Quartus available.
+
+It is recommended to use this repository as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) in your project.
+
+
 ## Port Description jt49
 
 Name     | Direction | Width | Purpose
@@ -82,3 +110,18 @@ Value | Dynamic Range | Equivalent resistor
 
 - Saturation effects are not modelled
 - Channel mixing effects by short circuiting the outputs are not modelled
+
+## Related Projects
+
+Other sound chips from the same author
+
+Chip                   | Repository
+-----------------------|------------
+YM2203, YM2612, YM2610 | [JT12](https://github.com/jotego/jt12)
+YM2151                 | [JT51](https://github.com/jotego/jt51)
+YM3526                 | [JTOPL](https://github.com/jotego/jtopl)
+YM2149                 | [JT49](https://github.com/jotego/jt49)
+sn76489an              | [JT89](https://github.com/jotego/jt89)
+OKI 6295               | [JT6295](https://github.com/jotego/jt6295)
+OKI MSM5205            | [JT5205](https://github.com/jotego/jt5205)
+NEC uPN7759            | [JT7759](https://github.com/jotego/jt7759)

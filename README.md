@@ -10,6 +10,7 @@ This is an FPGA implementation of the NEO GEO/MVS system by [Furrtek](https://ww
 * Compatible with decrypted MAME ROM sets using your own XML
 * Compatible with decrypted .neo ROM sets
 * Compatible with gog.com ROMs using provided XML
+* CHD format for CD supported
 * Support for Universe BIOS
 
 Note: This core does not support encrypted ROMs. Make sure the ROM has no encrypted parts before using. MAME ROM pack includes many encrypted ROMs so it's not recommended for inexperienced users. Using the .neo conversion tool with a MAME ROM set will result in some ROMs still being encrypted. There is an alternate .neo conversion tool for the Darksoft ROM set that will give you a fully decrypted set.
