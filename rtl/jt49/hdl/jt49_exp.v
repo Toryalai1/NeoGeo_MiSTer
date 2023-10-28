@@ -21,9 +21,6 @@
     
     */
 
-// altera message_off 10030
-
-`timescale 1ns / 1ps
 
 // Compression vs dynamic range
 // 0 -> 43.6dB

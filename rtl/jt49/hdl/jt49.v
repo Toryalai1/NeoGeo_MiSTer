@@ -35,22 +35,23 @@ module jt49 ( // note that input ports are not multiplexed
     output reg [7:0] A,      // linearised channel output
     output reg [7:0] B,
     output reg [7:0] C,
+    output           sample,
 
     input      [7:0] IOA_in,
     output     [7:0] IOA_out,
+    output           IOA_oe,
 
     input      [7:0] IOB_in,
-    output     [7:0] IOB_out
+    output     [7:0] IOB_out,
+    output           IOB_oe
 );
 
 parameter [1:0] COMP=2'b00;
 parameter       CLKDIV=3;
 wire [1:0] comp = COMP;
 
-reg [7:0] regarray[15:0];
-
-assign IOA_out = regarray[14];
-assign IOB_out = regarray[15];
+reg  [7:0] regarray[15:0];
+wire [7:0] port_A, port_B;
 
 wire [4:0] envelope;
 wire bitA, bitB, bitC;
@@ -58,6 +59,14 @@ wire noise;
 reg Amix, Bmix, Cmix;
 
 wire cen16, cen256;
+
+assign IOA_out = regarray[14];
+assign IOB_out = regarray[15];
+assign port_A  = IOA_in;
+assign port_B  = IOB_in;
+assign IOA_oe  = regarray[7][6];
+assign IOB_oe  = regarray[7][7];
+assign sample  = cen16;
 
 jt49_cen #(.CLKDIV(CLKDIV)) u_cen(
     .clk    ( clk     ),
@@ -194,7 +203,7 @@ always @(posedge clk, negedge rst_n) begin
     end
 end
 
-reg [7:0] read_mask;
+reg  [7:0] read_mask;
 
 always @(*)
     case(addr)
@@ -226,8 +235,8 @@ always @(posedge clk, negedge rst_n) begin
         last_write  <= write;
         // Data read
         case( addr )
-            4'he: dout <= !regarray[7][6] ? IOA_in : 8'hff;
-            4'hf: dout <= !regarray[7][7] ? IOB_in : 8'hff;
+            4'he: dout <= port_A;
+            4'hf: dout <= port_B;
             default: dout <= regarray[ addr ] & read_mask;
         endcase
         // Data write
