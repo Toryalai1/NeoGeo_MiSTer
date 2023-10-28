@@ -2046,7 +2046,7 @@ jt10 YM2610(
 	.irq_n(Z80_nINT),
 	.adpcma_addr(ADPCMA_ADDR), .adpcma_bank(ADPCMA_BANK), .adpcma_roe_n(nSDROE), .adpcma_data(adpcma_d),
 	.adpcmb_addr(ADPCMB_ADDR), .adpcmb_roe_n(nSDPOE), .adpcmb_data(SYSTEM_CDx ? 8'h08 : adpcmb_d),	// CD has no ADPCM-B
-	.snd_right(snd_right), .snd_left(snd_left), .snd_enable(~{4{dbg_menu}} | ~status[28:25]), .ch_enable(~status[62:57])
+    .snd_right(snd_right), .snd_left(snd_left), /*.snd_enable(~{4{dbg_menu}} | ~status[28:25]),*/ .ch_enable(~status[62:57])
 );
 
 wire [16:0] snd_mix_l = $signed(snd_left) + $signed(CD_AUDIO_L);
