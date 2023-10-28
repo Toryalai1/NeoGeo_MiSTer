@@ -12,7 +12,7 @@ module cdda
 );
 
 localparam SECTOR_SIZE = 2352*8/32;
-localparam BUFFER_AMOUNT = 2 * SECTOR_SIZE;
+localparam BUFFER_AMOUNT = 2048;//2 * SECTOR_SIZE;
 
 reg OLD_WRITE, OLD_READ, LRCK, WR_REQ;
 
