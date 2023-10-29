@@ -291,6 +291,7 @@ localparam CONF_STR = {
 	"RL,Reload Memory Card;",
 	"D4RC,Save Memory Card;",
 	"OO,Autosave,OFF,ON;",
+	"H2oB,Pause Mode,OSD,DIP;",
 	"-;",
 	"O2,CD Type,CD,CDZ;",
 	"OTU,CD Speed,1x,2x,3x,4x;",
@@ -497,7 +498,7 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(1), .VDNUM(2)) hps_io
 	.ps2_key(ps2_key),
 
 	.status(status),				// status read (32 bits)
-	.status_menumask({status[22], 9'd0, en216p, bk_autosave | ~bk_pending, ~dbg_menu,~SYSTEM_MVS,1'b0,SYSTEM_CDx}),
+	.status_menumask({status[22], 8'd0, pause_mode, en216p, bk_autosave | ~bk_pending, ~dbg_menu,~SYSTEM_MVS,1'b0,SYSTEM_CDx}),
 
 	.RTC(rtc),
 	.sdram_sz(sdram_sz),
@@ -1579,12 +1580,15 @@ neo_e0 E0(
 	.CDA(CDA)
 );
 
+wire pause_mode = ~status[43];
+wire pause = pause_mode ? OSD_STATUS : status[9];
+
 neo_f0 F0(
 	.CLK(CLK_48M),
 	.nRESET(nRESET),
 	.nDIPRD0(nDIPRD0), .nDIPRD1(nDIPRD1),
 	.nBITW0(nBITW0), .nBITWD0(nBITWD0),
-	.DIPSW({~status[9:8], 5'b11111, ~status[7]}),
+	.DIPSW({~pause, ~status[8], 5'b11111, ~status[7]}),
 	.COIN1(~joystick_0[10]), .COIN2(~joystick_1[10]),
 	.M68K_ADDR(M68K_ADDR[7:4]),
 	.M68K_DATA(M68K_DATA[7:0]),
